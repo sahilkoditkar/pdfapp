@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PdfScanner"
+rootProject.name = "PdfLens"
 include(":app")

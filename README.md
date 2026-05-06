@@ -1,4 +1,4 @@
-# PDF Scanner
+# PDF Lens
 
 A simple, offline Android app that scans documents from the camera and assembles
 them into PDFs. No ads, no accounts, no network — the app does not request the
@@ -16,9 +16,9 @@ them into PDFs. No ads, no accounts, no network — the app does not request the
 
 ```
 app/                                  Android app module
-  src/main/java/dev/pdfscanner/
+  src/main/java/dev/pdflens/
     MainActivity.kt                   Entry point; loads OpenCV
-    ui/PdfScannerApp.kt               Nav graph
+    ui/PdfLensApp.kt                  Nav graph
     ui/CameraScreen.kt                CameraX capture
     ui/EdgeEditScreen.kt              Drag-the-corners editor
     ui/DocumentListScreen.kt          PDF library
@@ -45,13 +45,13 @@ The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`.
 
 1. Generate a keystore once:
    ```bash
-   keytool -genkey -v -keystore release.keystore -alias pdfscanner \
+   keytool -genkey -v -keystore release.keystore -alias pdflens \
      -keyalg RSA -keysize 4096 -validity 10000
    base64 -w 0 release.keystore > release.keystore.b64
    ```
 2. In repo Settings → Secrets and variables → Actions, add:
    - `SIGNING_KEY` — contents of `release.keystore.b64`
-   - `SIGNING_KEY_ALIAS` — e.g. `pdfscanner`
+   - `SIGNING_KEY_ALIAS` — e.g. `pdflens`
    - `SIGNING_KEY_PASSWORD`
    - `SIGNING_STORE_PASSWORD`
 3. Tag and push:

@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.pdfscanner"
+    namespace = "dev.pdflens"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.pdfscanner"
+        applicationId = "dev.pdflens"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
