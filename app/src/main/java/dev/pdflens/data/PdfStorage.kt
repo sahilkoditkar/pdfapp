@@ -19,7 +19,9 @@ import java.io.OutputStream
  */
 object PdfStorage {
 
-    private const val FILENAME_PREFIX = "scan_"
+    const val SCAN_PREFIX = "scan_"
+    const val IMPORT_PREFIX = "imported_"
+    private val PREFIXES = listOf(SCAN_PREFIX, IMPORT_PREFIX)
 
     /**
      * Creates a new PDF in `Documents/` and lets [write] stream bytes into it.
@@ -84,7 +86,7 @@ object PdfStorage {
         }
     }
 
-    /** Lists scans this app produced (filename starts with [FILENAME_PREFIX]). */
+    /** Lists scans this app produced or imported (filename starts with one of [PREFIXES]). */
     fun list(context: Context): List<SavedPdf> {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             listViaMediaStore(context)
@@ -100,21 +102,28 @@ object PdfStorage {
         val projection = arrayOf(
             MediaStore.MediaColumns._ID,
             MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.SIZE,
+            MediaStore.MediaColumns.DATE_MODIFIED,
         )
+        val nameClause = PREFIXES.joinToString(" OR ") {
+            "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?"
+        }
         val selection =
             "${MediaStore.MediaColumns.MIME_TYPE} = ? AND " +
-                "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? AND " +
+                "($nameClause) AND " +
                 "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
-        val args = arrayOf(
-            "application/pdf",
-            "$FILENAME_PREFIX%",
-            "${Environment.DIRECTORY_DOCUMENTS}/%",
-        )
+        val args = buildList {
+            add("application/pdf")
+            PREFIXES.forEach { add("$it%") }
+            add("${Environment.DIRECTORY_DOCUMENTS}/%")
+        }.toTypedArray()
         val sort = "${MediaStore.MediaColumns.DATE_MODIFIED} DESC"
         val out = mutableListOf<SavedPdf>()
         resolver.query(collection, projection, selection, args, sort)?.use { c ->
             val idCol = c.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val nameCol = c.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            val sizeCol = c.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
+            val dateCol = c.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
                 val name = c.getString(nameCol)
@@ -123,6 +132,9 @@ object PdfStorage {
                     name = name.removeSuffix(".pdf"),
                     uri = uri,
                     pageCount = readPageCount(context, uri),
+                    sizeBytes = c.getLong(sizeCol),
+                    // MediaStore stores DATE_MODIFIED in seconds since epoch.
+                    dateModifiedMs = c.getLong(dateCol) * 1000L,
                 )
             }
         }
@@ -135,7 +147,7 @@ object PdfStorage {
         return dir.listFiles { f ->
             f.isFile &&
                 f.extension.equals("pdf", ignoreCase = true) &&
-                f.name.startsWith(FILENAME_PREFIX)
+                PREFIXES.any { f.name.startsWith(it) }
         }
             ?.sortedByDescending { it.lastModified() }
             ?.map { file ->
@@ -148,6 +160,8 @@ object PdfStorage {
                     name = file.nameWithoutExtension,
                     uri = uri,
                     pageCount = readPageCount(context, uri),
+                    sizeBytes = file.length(),
+                    dateModifiedMs = file.lastModified(),
                 )
             }
             ?: emptyList()
@@ -156,4 +170,60 @@ object PdfStorage {
     fun delete(context: Context, uri: Uri): Boolean = runCatching {
         context.contentResolver.delete(uri, null, null) > 0
     }.getOrDefault(false)
+
+    /**
+     * Renames the file at [uri] to [newDisplayName] (without the `.pdf` suffix —
+     * this function appends it). Returns the new content URI on success.
+     */
+    fun rename(context: Context, uri: Uri, newDisplayName: String): Uri? {
+        val sanitized = sanitizeFileName(newDisplayName).ifEmpty { return null }
+        val newFileName = ensurePrefix(sanitized) + ".pdf"
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            renameViaMediaStore(context, uri, newFileName)
+        } else {
+            renameViaLegacyFile(context, uri, newFileName)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun renameViaMediaStore(context: Context, uri: Uri, newFileName: String): Uri? {
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, newFileName)
+        }
+        val rows = runCatching { context.contentResolver.update(uri, values, null, null) }
+            .getOrDefault(0)
+        return if (rows > 0) uri else null
+    }
+
+    private fun renameViaLegacyFile(context: Context, uri: Uri, newFileName: String): Uri? {
+        // FileProvider URIs map back to a file under Documents/. Since we own
+        // the path config we can locate it by display name.
+        val resolver = context.contentResolver
+        val cursor = resolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)
+        val oldName = cursor?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        } ?: return null
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+        val oldFile = File(dir, oldName)
+        val newFile = File(dir, newFileName)
+        if (newFile.exists()) return null
+        if (!oldFile.renameTo(newFile)) return null
+        MediaScannerConnection.scanFile(
+            context,
+            arrayOf(oldFile.absolutePath, newFile.absolutePath),
+            arrayOf("application/pdf", "application/pdf"),
+            null,
+        )
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            newFile,
+        )
+    }
+
+    private fun sanitizeFileName(input: String): String =
+        input.trim().replace(Regex("[\\\\/:*?\"<>|\\r\\n]"), "_")
+
+    private fun ensurePrefix(name: String): String =
+        if (PREFIXES.any { name.startsWith(it) }) name else "$SCAN_PREFIX$name"
 }
