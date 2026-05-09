@@ -164,15 +164,15 @@ private fun PdfPage(renderer: PdfRenderer, index: Int) {
         val heightPx = with(density) { maxHeight.roundToPx() }
 
         // Render off the main thread; bitmap is recreated when the viewport
-        // size or page index changes.
+        // size or page index changes. Failures (e.g. the renderer being
+        // closed mid-render after the user navigates away) collapse to null
+        // rather than propagating up and crashing the app.
         val bitmap by produceState<Bitmap?>(initialValue = null, key1 = index, key2 = widthPx, key3 = heightPx) {
-            value = withContext(Dispatchers.IO) {
-                renderPage(renderer, index, widthPx, heightPx)
-            }
-        }
-
-        DisposableEffect(bitmap) {
-            onDispose { bitmap?.recycle() }
+            value = runCatching {
+                withContext(Dispatchers.IO) {
+                    renderPage(renderer, index, widthPx, heightPx)
+                }
+            }.getOrNull()
         }
 
         var scale by remember { mutableFloatStateOf(1f) }
@@ -209,25 +209,29 @@ private fun PdfPage(renderer: PdfRenderer, index: Int) {
 }
 
 // PdfRenderer is single-threaded: only one page may be open at a time.
+// Returns null if the renderer was closed (e.g. the viewer was disposed
+// while a background render was still in flight) or anything else fails.
 private fun renderPage(renderer: PdfRenderer, index: Int, viewportW: Int, viewportH: Int): Bitmap? {
     if (viewportW <= 0 || viewportH <= 0) return null
-    return synchronized(renderer) {
-        if (index !in 0 until renderer.pageCount) return@synchronized null
-        renderer.openPage(index).use { page ->
-            val pageRatio = page.width.toFloat() / page.height
-            val viewportRatio = viewportW.toFloat() / viewportH
-            val (w, h) = if (pageRatio > viewportRatio) {
-                viewportW to (viewportW / pageRatio).toInt().coerceAtLeast(1)
-            } else {
-                (viewportH * pageRatio).toInt().coerceAtLeast(1) to viewportH
+    return runCatching {
+        synchronized(renderer) {
+            if (index !in 0 until renderer.pageCount) return@synchronized null
+            renderer.openPage(index).use { page ->
+                val pageRatio = page.width.toFloat() / page.height
+                val viewportRatio = viewportW.toFloat() / viewportH
+                val (w, h) = if (pageRatio > viewportRatio) {
+                    viewportW to (viewportW / pageRatio).toInt().coerceAtLeast(1)
+                } else {
+                    (viewportH * pageRatio).toInt().coerceAtLeast(1) to viewportH
+                }
+                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
+                    eraseColor(Color.WHITE)
+                }
+                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                bmp
             }
-            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).apply {
-                eraseColor(Color.WHITE)
-            }
-            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            bmp
         }
-    }
+    }.getOrNull()
 }
 
 private fun sharePdf(context: android.content.Context, pdf: SavedPdf) {
