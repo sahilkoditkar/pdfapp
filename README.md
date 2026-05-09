@@ -1,15 +1,21 @@
 # PDF Lens
 
-A simple, offline Android app that scans documents from the camera and assembles
-them into PDFs. No ads, no accounts, no network — the app does not request the
-`INTERNET` permission, so captures never leave the device.
+A simple Android app that scans documents and assembles them into PDFs. No
+ads, no accounts. Scanning is delegated to Google Play Services' ML Kit
+Document Scanner, which runs entirely on-device — captures never leave the
+device.
+
+The app itself does not request the `INTERNET` permission and makes no network
+calls of its own. Play Services downloads the scanner module on first use
+(handled in its own process), so the **device** needs a connection once to
+fetch the model; after that, scanning works fully offline.
 
 ## Stack
 
 - **UI**: Kotlin + Jetpack Compose + Material 3
-- **Capture**: CameraX
-- **Edge detection / perspective**: OpenCV (Maven AAR — fully offline, no Play Services)
-- **PDF assembly**: `android.graphics.pdf.PdfDocument`
+- **Scanning**: [ML Kit Document Scanner](https://developers.google.com/ml-kit/vision/doc-scanner)
+  via Google Play Services — handles camera preview, edge detection,
+  perspective correction, filters, and PDF assembly on-device
 - **Min SDK**: 24 (Android 7.0) · **Target SDK**: 35
 
 ## Project layout
@@ -17,19 +23,18 @@ them into PDFs. No ads, no accounts, no network — the app does not request the
 ```
 app/                                  Android app module
   src/main/java/dev/pdflens/
-    MainActivity.kt                   Entry point; loads OpenCV
-    ui/PdfLensApp.kt                  Nav graph
-    ui/CameraScreen.kt                CameraX capture
-    ui/EdgeEditScreen.kt              Drag-the-corners editor
+    MainActivity.kt                   Entry point
+    ui/PdfLensApp.kt                  Hosts the scanner launcher + library
     ui/DocumentListScreen.kt          PDF library
-    scan/EdgeDetector.kt              OpenCV contour-based quad detection
-    scan/PerspectiveTransform.kt      Warp + adaptive threshold "scan look"
-    pdf/PdfBuilder.kt                 Multi-page PDF generation
     data/DocumentRepository.kt        Lists saved PDFs
 .github/workflows/
   build.yml                           Debug APK on every push/PR (artifact)
   release.yml                         Signed release APK on tags (GitHub Release)
 ```
+
+The scanning UI, edge detection, perspective correction, and PDF generation all
+live inside Google Play Services — the app simply launches the scanner and
+copies the resulting PDF into its private storage.
 
 ## Building locally
 
@@ -40,6 +45,9 @@ gradle wrapper                        # one-time: generates gradle-wrapper.jar
 ```
 
 The debug APK is at `app/build/outputs/apk/debug/app-debug.apk`.
+
+The device or emulator running the app needs Google Play Services installed for
+the scanner to launch.
 
 ## Cutting a release on GitHub
 
@@ -68,8 +76,13 @@ APK as an artifact (downloadable by repo collaborators only).
 
 ## Privacy
 
-- No `INTERNET` permission — the app cannot make network calls.
-- Captures and PDFs are written to the app's private internal storage
-  (`filesDir`); other apps cannot read them.
+- No `INTERNET` permission in this app — it cannot make network calls itself.
+  Google Play Services downloads the scanner module on first use in its own
+  process; once cached, no further network access is required.
+- No `CAMERA` permission in this app's manifest. The ML Kit scanner activity
+  declares its own camera permission and runs in the Play Services process;
+  scan images are processed on-device and never uploaded.
+- PDFs are written to the app's private internal storage (`filesDir`); other
+  apps cannot read them.
 - `allowBackup="false"` and explicit data extraction rules exclude scans from
   Android cloud backup and device-to-device transfer.

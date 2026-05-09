@@ -72,23 +72,6 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
-        jniLibs {
-            useLegacyPackaging = false
-        }
-    }
-
-    // OpenCV's native libs dominate APK size (~30-50 MB per ABI). Ship only
-    // arm64-v8a — it covers virtually every active Android phone since 2019.
-    // Re-add "armeabi-v7a" for legacy 32-bit devices or "x86_64" for emulators.
-    // (Play Store distribution via App Bundle handles per-device delivery
-    // automatically and you can drop this block entirely.)
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a")
-            isUniversalApk = false
-        }
     }
 }
 
@@ -106,13 +89,11 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
-    implementation(libs.androidx.camera.core)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-
-    implementation(libs.androidx.documentfile)
-    implementation(libs.opencv)
+    // Document scanning: edge detection, perspective correction, filters, and
+    // PDF assembly all run on-device via Google Play Services. The actual
+    // scanner UI and ML model live in Play Services, so the client library is
+    // small and no images leave the device.
+    implementation(libs.mlkit.document.scanner)
 
     debugImplementation(libs.androidx.ui.tooling)
 }

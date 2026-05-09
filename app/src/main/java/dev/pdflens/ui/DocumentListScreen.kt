@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,12 +44,17 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DocumentListScreen(onNewScan: () -> Unit) {
+fun DocumentListScreen(
+    refreshKey: Int = 0,
+    onNewScan: () -> Unit,
+) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var pdfs by remember { mutableStateOf<List<SavedPdf>>(emptyList()) }
-    // Refresh on every resume so a freshly saved scan appears when the user
-    // returns from the camera flow.
+    // Refresh when a freshly scanned PDF is saved.
+    LaunchedEffect(refreshKey) { pdfs = listSavedPdfs(context) }
+    // Also refresh on resume so the list stays current after returning from
+    // the system PDF viewer or other apps.
     DisposableEffect(lifecycle) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
