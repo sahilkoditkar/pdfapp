@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Camera capture only. No INTERNET permission: nothing leaves the device. -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-feature android:name="android.hardware.camera" android:required="true" />
-    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <!-- Scanning is delegated to Google Play Services' on-device document
+         scanner; the scanner activity declares its own camera permission, so
+         no CAMERA permission is needed in this app. No INTERNET permission
+         either: scan images never leave the device. -->
 
     <!-- PDFs are opened via system viewers. Declare a query so ACTION_VIEW
          for application/pdf resolves on Android 11+. -->
