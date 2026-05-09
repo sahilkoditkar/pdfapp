@@ -1,7 +1,7 @@
-package dev.pdfscanner.scan
+package dev.pdflens.scan
 
 import androidx.compose.ui.geometry.Offset
-import dev.pdfscanner.ui.Quad
+import dev.pdflens.ui.Quad
 import org.opencv.android.Utils
 import org.opencv.core.Mat
 import org.opencv.core.MatOfPoint

@@ -1,8 +1,8 @@
-package dev.pdfscanner.scan
+package dev.pdflens.scan
 
 import android.graphics.Bitmap
 import androidx.compose.ui.geometry.Offset
-import dev.pdfscanner.ui.Quad
+import dev.pdflens.ui.Quad
 import org.opencv.android.Utils
 import org.opencv.core.CvType
 import org.opencv.core.Mat

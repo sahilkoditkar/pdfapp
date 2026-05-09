@@ -1,4 +1,4 @@
-package dev.pdfscanner.ui
+package dev.pdflens.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,8 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import dev.pdfscanner.data.SavedPdf
-import dev.pdfscanner.data.listSavedPdfs
+import dev.pdflens.data.SavedPdf
+import dev.pdflens.data.listSavedPdfs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +35,7 @@ fun DocumentListScreen(onNewScan: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("PDF Scanner") }) },
+        topBar = { TopAppBar(title = { Text("PDF Lens") }) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onNewScan,

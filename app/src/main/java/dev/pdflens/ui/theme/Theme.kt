@@ -1,4 +1,4 @@
-package dev.pdfscanner.ui.theme
+package dev.pdflens.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -14,7 +14,7 @@ private val LightColors = lightColorScheme()
 private val DarkColors = darkColorScheme()
 
 @Composable
-fun PdfScannerTheme(
+fun PdfLensTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {

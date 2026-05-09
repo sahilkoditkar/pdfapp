@@ -1,4 +1,4 @@
-package dev.pdfscanner.ui
+package dev.pdflens.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -34,7 +34,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import dev.pdfscanner.scan.EdgeDetector
+import dev.pdflens.scan.EdgeDetector
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date

@@ -1,4 +1,4 @@
-package dev.pdfscanner.ui
+package dev.pdflens.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
@@ -8,13 +8,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import dev.pdfscanner.pdf.PdfBuilder
+import dev.pdflens.pdf.PdfBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun PdfScannerApp() {
+fun PdfLensApp() {
     val nav = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

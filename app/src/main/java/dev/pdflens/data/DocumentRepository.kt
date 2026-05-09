@@ -1,4 +1,4 @@
-package dev.pdfscanner.data
+package dev.pdflens.data
 
 import android.content.Context
 import java.io.File

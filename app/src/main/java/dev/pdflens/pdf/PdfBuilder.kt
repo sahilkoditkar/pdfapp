@@ -1,4 +1,4 @@
-package dev.pdfscanner.pdf
+package dev.pdflens.pdf
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -6,8 +6,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.pdf.PdfDocument
-import dev.pdfscanner.scan.PerspectiveTransform
-import dev.pdfscanner.ui.CapturedPage
+import dev.pdflens.scan.PerspectiveTransform
+import dev.pdflens.ui.CapturedPage
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat

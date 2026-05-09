@@ -1,4 +1,4 @@
-package dev.pdfscanner.ui
+package dev.pdflens.ui
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas

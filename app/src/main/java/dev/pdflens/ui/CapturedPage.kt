@@ -1,4 +1,4 @@
-package dev.pdfscanner.ui
+package dev.pdflens.ui
 
 import androidx.compose.ui.geometry.Offset
 
