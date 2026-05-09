@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,11 +35,27 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun PdfLensApp() {
+fun PdfLensApp(
+    incomingPdf: Uri? = null,
+    onIncomingConsumed: () -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var refreshKey by remember { mutableIntStateOf(0) }
     var viewing by remember { mutableStateOf<SavedPdf?>(null) }
+
+    // Import a PDF that arrived via ACTION_SEND or ACTION_VIEW.
+    LaunchedEffect(incomingPdf) {
+        val src = incomingPdf ?: return@LaunchedEffect
+        val savedUri = withContext(Dispatchers.IO) { importPdf(context, src) }
+        if (savedUri != null) {
+            refreshKey++
+            Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Could not import PDF", Toast.LENGTH_LONG).show()
+        }
+        onIncomingConsumed()
+    }
 
     val scanner = remember {
         GmsDocumentScanning.getClient(
@@ -123,13 +140,24 @@ fun PdfLensApp() {
 }
 
 private fun saveScannedPdf(context: Context, sourceUri: Uri): Uri? {
-    val name = "scan_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.pdf"
-    return PdfStorage.create(context, name) { out ->
+    val name = "scan_${stamp()}.pdf"
+    return copyInto(context, sourceUri, name)
+}
+
+private fun importPdf(context: Context, sourceUri: Uri): Uri? {
+    val name = "imported_${stamp()}.pdf"
+    return copyInto(context, sourceUri, name)
+}
+
+private fun copyInto(context: Context, sourceUri: Uri, displayName: String): Uri? =
+    PdfStorage.create(context, displayName) { out ->
         context.contentResolver.openInputStream(sourceUri)?.use { input ->
             input.copyTo(out)
-        } ?: error("Could not open scanned PDF")
+        } ?: error("Could not open source PDF")
     }
-}
+
+private fun stamp(): String =
+    SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
