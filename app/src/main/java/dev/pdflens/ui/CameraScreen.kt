@@ -1,11 +1,13 @@
 package dev.pdflens.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -33,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +51,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.pdflens.scan.EdgeDetector
 import dev.pdflens.scan.LiveEdgeAnalyzer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -114,6 +121,18 @@ fun CameraScreen(
             }
     }
 
+    val scope = rememberCoroutineScope()
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val page = withContext(Dispatchers.IO) { importImageAsCapturedPage(context, uri) }
+                if (page != null) onCaptured(page)
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -153,7 +172,6 @@ fun CameraScreen(
             val q = liveQuad ?: return@Canvas
             val cw = size.width
             val ch = size.height
-            // 4:3 portrait → 3:4 displayed; pick whichever fits.
             val displayAspect = 3f / 4f
             val canvasAspect = cw / ch
             val (drawW, drawH) = if (canvasAspect > displayAspect) {
@@ -181,6 +199,18 @@ fun CameraScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    galleryLauncher.launch(
+                        PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                },
+                icon = { Icon(Icons.Filled.PhotoLibrary, contentDescription = null) },
+                text = { Text("Import") },
+            )
+
             ExtendedFloatingActionButton(
                 onClick = {
                     val outFile = File(
@@ -227,4 +257,28 @@ fun CameraScreen(
             }
         }
     }
+}
+
+private fun importImageAsCapturedPage(context: Context, uri: Uri): CapturedPage? {
+    val outFile = File(
+        context.filesDir,
+        "scan_${SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())}.jpg",
+    )
+    val copied = runCatching {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            outFile.outputStream().use { output -> input.copyTo(output) }
+        } != null
+    }.getOrDefault(false)
+    if (!copied) return null
+
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(outFile.absolutePath, bounds)
+    val w = bounds.outWidth
+    val h = bounds.outHeight
+    if (w <= 0 || h <= 0) {
+        outFile.delete()
+        return null
+    }
+    val quad = EdgeDetector.detect(outFile.absolutePath) ?: Quad.full(w, h)
+    return CapturedPage(rawPath = outFile.absolutePath, width = w, height = h, quad = quad)
 }
