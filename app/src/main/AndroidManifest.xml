@@ -6,8 +6,16 @@
          no CAMERA permission is needed in this app. No INTERNET permission
          either: scan images never leave the device. -->
 
-    <!-- PDFs are opened via system viewers. Declare a query so ACTION_VIEW
-         for application/pdf resolves on Android 11+. -->
+    <!-- API 24-28: writing into the public Documents/ folder requires the
+         legacy storage permission. API 29+ uses MediaStore which is
+         permissionless for the app's own files. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- The in-app PDF viewer offers a "Share" and "Open with" action. The
+         Share chooser uses ACTION_SEND, but ACTION_VIEW for PDFs needs this
+         <queries> declaration so the chooser resolves on Android 11+. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />

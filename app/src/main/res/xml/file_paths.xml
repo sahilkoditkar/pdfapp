@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <files-path name="pdfs" path="pdfs/" />
+    <!-- API 24-28: scans live in the public Documents/ folder; FileProvider
+         wraps them as content:// URIs for share / view intents. API 29+
+         goes through MediaStore directly and does not use this provider. -->
+    <external-path name="documents" path="Documents/" />
 </paths>
