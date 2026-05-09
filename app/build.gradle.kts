@@ -73,6 +73,18 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Self-describing artifact names (e.g. `pdflens-0.1.0-1-release.apk`)
+    // instead of the default `app-release.apk`. Makes attachments on CI,
+    // GitHub releases, and local builds traceable to a version at a glance.
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
+                .outputFileName =
+                "pdflens-${variant.versionName}-${variant.versionCode}-${variant.buildType.name}.apk"
+        }
+    }
 }
 
 dependencies {
