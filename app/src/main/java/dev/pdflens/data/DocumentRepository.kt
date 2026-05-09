@@ -1,6 +1,8 @@
 package dev.pdflens.data
 
 import android.content.Context
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import java.io.File
 
 data class SavedPdf(
@@ -14,10 +16,20 @@ fun listSavedPdfs(context: Context): List<SavedPdf> {
     if (!dir.exists()) return emptyList()
     return dir.listFiles { f -> f.extension.equals("pdf", ignoreCase = true) }
         ?.sortedByDescending { it.lastModified() }
-        ?.map {
-            // Page count from the PDF would require ParcelFileDescriptor + PdfRenderer;
-            // skipped here for the scaffold — show the filename only.
-            SavedPdf(name = it.nameWithoutExtension, path = it.absolutePath, pageCount = 0)
+        ?.map { file ->
+            SavedPdf(
+                name = file.nameWithoutExtension,
+                path = file.absolutePath,
+                pageCount = readPageCount(file),
+            )
         }
         ?: emptyList()
+}
+
+private fun readPageCount(file: File): Int = try {
+    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+        PdfRenderer(pfd).use { it.pageCount }
+    }
+} catch (_: Throwable) {
+    0
 }
