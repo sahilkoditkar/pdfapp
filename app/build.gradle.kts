@@ -16,8 +16,12 @@ android {
         versionName = "0.1.0"
 
         ndk {
-            // OpenCV ships native libs; ship only modern ABIs to keep APK small.
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // OpenCV's native libs dominate APK size (~30-50 MB per ABI). Ship only
+            // arm64-v8a — it covers virtually every active Android phone since 2019.
+            // Re-add "armeabi-v7a" if you need to support legacy 32-bit devices, and
+            // "x86_64" only if you publish to emulator users / Chromebooks. Prefer
+            // ABI splits below over a fat APK that bundles every architecture.
+            abiFilters += listOf("arm64-v8a")
         }
     }
 
@@ -73,6 +77,21 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    // Ship one APK per ABI rather than a fat APK. Drops install size dramatically
+    // for users on a single architecture. Disable if you only distribute via Play
+    // (App Bundle handles per-device delivery automatically — see README).
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
         }
     }
 }
